@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Edit Prize Rules</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f4f4f9;
+        color: #333;
+        text-align: center;
+      }
+      h1 {
+        background-color: #2e8b57;
+        color: white;
+        margin: 0;
+        padding: 20px 0;
+        font-size: 24px;
+      }
+      table {
+        width: 80%;
+        margin: 20px auto;
+        border-collapse: collapse;
+        background: white;
+      }
+      th, td {
+        padding: 10px;
+        border: 1px solid #ddd;
+        text-align: center;
+      }
+      th {
+        background: #2e8b57;
+        color: white;
+      }
+      input {
+        width: 100%;
+        border: none;
+        text-align: center;
+      }
+      input:disabled {
+        background: #f0f0f0;
+        color: #999;
+      }
+      button {
+        margin: 20px;
+        padding: 10px 20px;
+        color: white;
+        background: #2e8b57;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #256d47;
+      }
+      .message {
+        margin-top: 20px;
+        font-size: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Edit Prize Rules</h1>
+    <table id="prizeRulesTable">
+      <thead>
+        <tr>
+          <th># of Players</th>
+          <th>1st Place</th>
+          <th>2nd Place</th>
+          <th>3rd Place</th>
+          <th>Buyin</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <button onclick="submitUpdates()" id="submitButton">Submit Updates</button>
+    <button onclick="reloadData()" id="reloadButton" style="display: none;">Reload PrizeRules</button>
+    <div class="message" id="message"></div>
+
+    <script>
+      // Fetch data from the backend and populate the table
+      google.script.run.withSuccessHandler(renderPrizeRules).getPrizeRulesData();
+
+      function renderPrizeRules(data) {
+        const tbody = document.querySelector('#prizeRulesTable tbody');
+        tbody.innerHTML = ''; // Clear existing content
+
+        data.forEach((row, rowIndex) => {
+          const tr = document.createElement('tr');
+          row.forEach((cell, colIndex) => {
+            const td = document.createElement('td');
+            const input = document.createElement('input');
+            input.value = cell;
+            input.dataset.row = rowIndex;
+            input.dataset.col = colIndex;
+            td.appendChild(input);
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+
+        unlockTable(); // Ensure table is editable after reloading
+      }
+
+      function submitUpdates() {
+        const table = document.querySelector('#prizeRulesTable');
+        const rows = Array.from(table.querySelectorAll('tbody tr'));
+        const updatedData = rows.map(row => {
+          const cells = Array.from(row.querySelectorAll('input'));
+          return cells.map(cell => cell.value);
+        });
+
+        google.script.run
+          .withSuccessHandler(response => {
+            const messageDiv = document.getElementById('message');
+            messageDiv.style.color = 'green';
+            messageDiv.textContent = response.message;
+
+            lockTable(); // Lock the table after submission
+          })
+          .updatePrizeRulesData(updatedData);
+      }
+
+      function lockTable() {
+        const inputs = document.querySelectorAll('#prizeRulesTable input');
+        inputs.forEach(input => (input.disabled = true));
+
+        // Hide the submit button and show the reload button
+        document.getElementById('submitButton').style.display = 'none';
+        document.getElementById('reloadButton').style.display = 'inline-block';
+      }
+
+      function unlockTable() {
+        const inputs = document.querySelectorAll('#prizeRulesTable input');
+        inputs.forEach(input => (input.disabled = false));
+
+        // Show the submit button and hide the reload button
+        document.getElementById('submitButton').style.display = 'inline-block';
+        document.getElementById('reloadButton').style.display = 'none';
+      }
+
+      function reloadData() {
+        google.script.run.withSuccessHandler(renderPrizeRules).getPrizeRulesData();
+        document.getElementById('message').textContent = ''; // Clear the message
+      }
+    </script>
+  </body>
+</html>

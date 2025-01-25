@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Scoreboard</title>
+    <style>
+      body {
+        font-family: 'Arial', sans-serif;
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(to bottom, #2e8b57, #4caf50);
+        color: white;
+        text-align: center;
+      }
+      h1 {
+        background-color: #2e8b57;
+        color: white;
+        margin: 0;
+        padding: 20px;
+        font-size: 36px;
+        text-transform: uppercase;
+      }
+      table {
+        width: 90%;
+        margin: 20px auto;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      th, td {
+        padding: 15px;
+        text-align: center;
+        border-bottom: 1px solid #ddd;
+        font-size: 18px;
+        color: #333;
+      }
+      th {
+        background: #2e8b57;
+        color: white;
+        text-transform: uppercase;
+      }
+      tr:nth-child(even) {
+        background: #f9f9f9;
+      }
+      tr:nth-child(odd) {
+        background: #f1f1f1;
+      }
+      tr:hover {
+        background: #d4edda;
+      }
+      .rank {
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        font-size: 18px;
+      }
+      .rank-icon img {
+        width: 30px;
+        height: auto;
+      }
+      .balance {
+        font-weight: bold;
+      }
+      .player {
+        text-align: left;
+        padding-left: 10px;
+      }
+      .form {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+      }
+      .form-badge img {
+        width: 40px;
+        height: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Poker League Scoreboard</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Player</th>
+          <th>Balance</th>
+          <th>Form</th>
+        </tr>
+      </thead>
+      <tbody id="scoreboard">
+        <tr>
+          <td colspan="4" id="error-message">Loading...</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <script>
+      google.script.run
+        .withSuccessHandler(renderScoreboard)
+        .withFailureHandler((error) => {
+          const tbody = document.getElementById('scoreboard');
+          tbody.innerHTML = `<tr><td colspan="4" class="error">Failed to load scoreboard: ${error.message}</td></tr>`;
+          console.error('Error loading scoreboard:', error);
+        })
+        .getScoreboardData();
+
+      function renderScoreboard(data) {
+        const tbody = document.getElementById('scoreboard');
+        tbody.innerHTML = ''; // Clear existing content
+
+        if (!data || data.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="4" class="error">No data available for the scoreboard.</td></tr>`;
+          return;
+        }
+
+        data.forEach(player => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="rank">
+              ${getPlayerRankIcon(player.rank)}
+            </td>
+            <td class="player">${player.name}</td>
+            <td class="balance">${player.balance}</td>
+            <td class="form">
+              ${player.form.map(result => `
+                <div class="form-badge">
+                  ${result === 'L' ? getLoserIcon() : getFormIcon(result)}
+                </div>
+              `).join('')}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      function getPlayerRankIcon(rank) {
+        if (rank === 1) {
+          return `<span class="rank-icon"><img src="https://cdn-icons-png.flaticon.com/512/2484/2484663.png" alt="Ace of Spades" /> Ace of Spades</span>`;
+        }
+        if (rank === 2) {
+          return `<span class="rank-icon"><img src="https://cdn-icons-png.flaticon.com/512/15665/15665251.png" alt="2 of Diamonds" /> 2 of Diamonds</span>`;
+        }
+        if (rank === 3) {
+          return `<span class="rank-icon"><img src="https://cdn-icons-png.flaticon.com/512/12425/12425568.png" alt="3 of Hearts" /> 3 of Hearts</span>`;
+        }
+        return `Rank ${rank}`;
+      }
+
+      function getFormIcon(result) {
+        if (result === '1st') {
+          return `<img src="https://cdn-icons-png.flaticon.com/512/7645/7645285.png" alt="Gold Medal" />`;
+        }
+        if (result === '2nd') {
+          return `<img src="https://cdn-icons-png.flaticon.com/512/7645/7645682.png" alt="Silver Medal" />`;
+        }
+        if (result === '3rd') {
+          return `<img src="https://cdn-icons-png.flaticon.com/512/7645/7645706.png" alt="Bronze Medal" />`;
+        }
+        return `<img src="https://cdn-icons-png.flaticon.com/512/10398/10398632.png" alt="Letter L"/>`;
+      }
+
+      function getLoserIcon() {
+        return `<img src="https://cdn-icons-png.flaticon.com/512/10398/10398632.png" alt="Letter L"/>`;
+      }
+    </script>
+  </body>
+</html>

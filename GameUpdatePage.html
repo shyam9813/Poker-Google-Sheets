@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Game Update</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f9;
+        text-align: center;
+        color: #333;
+      }
+      h1 {
+        background-color: #2e8b57;
+        color: white;
+        padding: 20px;
+        margin: 0;
+      }
+      form {
+        margin: 20px auto;
+        padding: 20px;
+        background: white;
+        border-radius: 10px;
+        width: 80%;
+        max-width: 600px;
+        text-align: left;
+      }
+      label {
+        display: block;
+        margin-bottom: 10px;
+        font-weight: bold;
+      }
+      select, input, button {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 20px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      button {
+        background-color: #2e8b57;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #256d47;
+      }
+      button[disabled] {
+        background-color: #bbb;
+        cursor: not-allowed;
+      }
+      #participants {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr auto; /* 4 columns: Name, Switch, Name, Switch */
+        gap: 10px 20px;
+        align-items: center;
+        justify-items: start;
+      }
+      .participant-name {
+        text-align: right;
+        padding-right: 10px;
+        font-size: 14px;
+      }
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 34px;
+        height: 20px;
+        vertical-align: middle;
+      }
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: 0.4s;
+        border-radius: 20px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 14px;
+        width: 14px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 50%;
+      }
+      input:checked + .slider {
+        background-color: #2e8b57;
+      }
+      input:checked + .slider:before {
+        transform: translateX(14px);
+      }
+      .error {
+        color: red;
+        font-weight: bold;
+      }
+      .success {
+        color: green;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Game Update</h1>
+    <form id="gameUpdateForm">
+      <label for="numPlayers">Number of Players</label>
+      <select id="numPlayers" required onchange="updateParticipants()">
+        <option value="">Select</option>
+      </select>
+
+      <label>Participating Players</label>
+      <div id="participants"></div>
+
+      <label for="firstPlace">1st Place</label>
+      <select id="firstPlace" required onchange="filterPlaces('firstPlace')"></select>
+
+      <label for="secondPlace">2nd Place</label>
+      <select id="secondPlace" required onchange="filterPlaces('secondPlace')"></select>
+
+      <label for="thirdPlace">3rd Place</label>
+      <select id="thirdPlace" required onchange="filterPlaces('thirdPlace')"></select>
+
+      <label for="gameDate">Game Date and Time</label>
+      <input type="datetime-local" id="gameDate" required />
+
+      <button type="button" id="submitButton" onclick="submitForm()">Submit</button>
+      <button type="button" id="resetButton" onclick="resetForm()" style="display: none;">Add One More Game Result</button>
+      <div id="message"></div>
+    </form>
+
+    <script>
+      let players = [];
+      let filteredPlayers = [];
+      let selectedParticipants = [];
+
+      // Populate the Number of Players dropdown
+      google.script.run.withSuccessHandler(setNumberOfPlayersOptions).getNumberOfPlayersOptions();
+
+      function setNumberOfPlayersOptions(options) {
+        const numPlayersSelect = document.getElementById('numPlayers');
+        options.forEach(option => {
+          const opt = document.createElement('option');
+          opt.value = option;
+          opt.textContent = option;
+          numPlayersSelect.appendChild(opt);
+        });
+      }
+
+      google.script.run.withSuccessHandler(setPlayers).getPlayersList();
+
+      function setPlayers(playerList) {
+        players = playerList; // Store all players
+        updateParticipants(); // Populate the participants' switches
+        autoFillDateTime(); // Fill current date and time
+      }
+
+      function autoFillDateTime() {
+        const now = new Date();
+        const isoString = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        document.getElementById('gameDate').value = isoString;
+      }
+
+      function updateParticipants() {
+        const participantsDiv = document.getElementById('participants');
+        participantsDiv.innerHTML = ''; // Clear the current participant list
+
+        for (let i = 0; i < players.length; i += 2) {
+          // First column (Name and Switch)
+          const nameDiv1 = document.createElement('div');
+          nameDiv1.className = 'participant-name';
+          nameDiv1.textContent = players[i] || ''; // Add player name if exists
+
+          const switchDiv1 = document.createElement('div');
+          switchDiv1.innerHTML = players[i]
+            ? `
+            <label class="switch">
+              <input type="checkbox" name="participants" value="${players[i]}" onclick="updateFilteredPlayers()" />
+              <span class="slider"></span>
+            </label>`
+            : '';
+
+          participantsDiv.appendChild(nameDiv1);
+          participantsDiv.appendChild(switchDiv1);
+
+          // Second column (Name and Switch)
+          const nameDiv2 = document.createElement('div');
+          nameDiv2.className = 'participant-name';
+          nameDiv2.textContent = players[i + 1] || ''; // Add player name if exists
+
+          const switchDiv2 = document.createElement('div');
+          switchDiv2.innerHTML = players[i + 1]
+            ? `
+            <label class="switch">
+              <input type="checkbox" name="participants" value="${players[i + 1]}" onclick="updateFilteredPlayers()" />
+              <span class="slider"></span>
+            </label>`
+            : '';
+
+          participantsDiv.appendChild(nameDiv2);
+          participantsDiv.appendChild(switchDiv2);
+        }
+
+        filteredPlayers = [...players];
+        updatePlaceDropdowns();
+      }
+
+      function updateFilteredPlayers() {
+        // Update selected participants based on checked switches
+        selectedParticipants = Array.from(
+          document.querySelectorAll('input[name="participants"]:checked')
+        ).map(el => el.value);
+
+        updatePlaceDropdowns(); // Update dropdowns for 1st, 2nd, and 3rd places
+      }
+
+      function updatePlaceDropdowns() {
+        ['firstPlace', 'secondPlace', 'thirdPlace'].forEach(updatePlaceDropdown);
+      }
+
+      function updatePlaceDropdown(id) {
+        const dropdown = document.getElementById(id);
+        const selected = dropdown.value;
+        const allSelected = getSelectedPlaces();
+
+        dropdown.innerHTML = `<option value="">Select</option>`;
+        selectedParticipants.forEach(player => {
+          if (!allSelected.includes(player) || player === selected) {
+            const option = document.createElement('option');
+            option.value = player;
+            option.textContent = player;
+            if (player === selected) option.selected = true;
+            dropdown.appendChild(option);
+          }
+        });
+      }
+
+      function getSelectedPlaces() {
+        return ['firstPlace', 'secondPlace', 'thirdPlace']
+          .map(id => document.getElementById(id).value)
+          .filter(val => val);
+      }
+
+      function submitForm() {
+        const numPlayers = document.getElementById('numPlayers').value;
+        const gameDate = document.getElementById('gameDate').value;
+        const participants = Array.from(document.querySelectorAll('input[name="participants"]:checked')).map(el => el.value);
+        const firstPlace = document.getElementById('firstPlace').value;
+        const secondPlace = document.getElementById('secondPlace').value;
+        const thirdPlace = document.getElementById('thirdPlace').value;
+
+        if (participants.length !== parseInt(numPlayers)) {
+          document.getElementById('message').innerHTML = `<span class="error">Number of participants does not match the number of players.</span>`;
+          return;
+        }
+
+        const data = { numPlayers, participants, firstPlace, secondPlace, thirdPlace, gameDate };
+        google.script.run.withSuccessHandler(response => {
+          const message = document.getElementById('message');
+          if (response.success) {
+            message.innerHTML = `<span class="success">${response.message}</span>`;
+            lockForm(); // Lock fields after success
+          } else {
+            message.innerHTML = `<span class="error">${response.message}</span>`;
+          }
+        }).processGameUpdate(data);
+      }
+
+      function lockForm() {
+        document.getElementById('submitButton').style.display = 'none';
+        document.getElementById('resetButton').style.display = 'inline-block';
+
+        Array.from(document.querySelectorAll('input, select')).forEach(el => el.disabled = true);
+      }
+
+      function resetForm() {
+        document.getElementById('gameUpdateForm').reset();
+        document.getElementById('participants').innerHTML = '';
+        filteredPlayers = [];
+        updatePlaceDropdowns();
+
+        document.getElementById('submitButton').style.display = 'inline-block';
+        document.getElementById('resetButton').style.display = 'none';
+
+        Array.from(document.querySelectorAll('input, select')).forEach(el => el.disabled = false);
+        document.getElementById('message').innerHTML = '';
+      }
+    </script>
+  </body>
+</html>

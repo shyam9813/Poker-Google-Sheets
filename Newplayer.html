@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Add Player</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Noto Sans', sans-serif;
+        text-align: center;
+        background: linear-gradient(to bottom, #2e8b57, #4caf50);
+        color: white;
+        margin: 0;
+        padding: 20px;
+      }
+      h1 {
+        margin: 20px 0;
+        font-size: 24px;
+      }
+      form {
+        margin: 20px auto;
+        background: white;
+        color: #333;
+        padding: 20px;
+        border-radius: 10px;
+        width: 300px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+      input[type="text"] {
+        width: calc(100% - 20px);
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 16px;
+      }
+      input[type="text"]:disabled {
+        background: #f0f0f0;
+        color: #999;
+        cursor: not-allowed;
+      }
+      button {
+        padding: 10px 20px;
+        color: white;
+        background: #2e8b57;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #256d47;
+      }
+      button:disabled {
+        background: #bbb;
+        cursor: not-allowed;
+      }
+      .message {
+        margin-top: 20px;
+        font-size: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Add New Player</h1>
+    <form id="addPlayerForm">
+      <input type="text" id="playerName" placeholder="Enter player name" required />
+      <button type="button" onclick="submitPlayer()" id="submitButton">Add Player</button>
+      <button type="button" onclick="resetForm()" id="resetButton" style="display: none;">Reset and Add another Player</button>
+    </form>
+    <div class="message" id="message"></div>
+    
+    <script>
+      function submitPlayer() {
+        const name = document.getElementById('playerName').value.trim();
+        if (!name) {
+          document.getElementById('message').innerHTML = "Please enter a name.";
+          return;
+        }
+
+        // Call Apps Script backend to add the player
+        google.script.run.withSuccessHandler(function(response) {
+          const messageDiv = document.getElementById('message');
+          if (response.success) {
+            messageDiv.style.color = "green";
+            lockForm(); // Lock the form after successful submission
+          } else {
+            messageDiv.style.color = "red";
+          }
+          messageDiv.innerHTML = response.message;
+        }).addPlayer(name);
+      }
+
+      function lockForm() {
+        // Disable the input field and the submit button
+        document.getElementById('playerName').disabled = true;
+        document.getElementById('submitButton').style.display = 'none';
+        document.getElementById('resetButton').style.display = 'inline-block'; // Show the reset button
+      }
+
+      function resetForm() {
+        // Clear and enable the input field
+        document.getElementById('playerName').value = '';
+        document.getElementById('playerName').disabled = false;
+
+        // Show the submit button and hide the reset button
+        document.getElementById('submitButton').style.display = 'inline-block';
+        document.getElementById('resetButton').style.display = 'none';
+
+        // Clear the message
+        document.getElementById('message').innerHTML = '';
+      }
+    </script>
+  </body>
+</html>
